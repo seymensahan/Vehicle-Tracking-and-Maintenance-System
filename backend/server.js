@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const interventionRoutes = require('./routes/interventions');
+const interventionsRouter = require('./routes/interventions');  // Correct import
 const fileUploadRoutes = require('./routes/fileUpload');
 require('dotenv').config();
 
@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
-app.use('/api', interventionRoutes);
+app.use("/api/interventions", interventionsRouter);  // Correct usage of the router
 app.use('/api', fileUploadRoutes);
 
 // Start the server
