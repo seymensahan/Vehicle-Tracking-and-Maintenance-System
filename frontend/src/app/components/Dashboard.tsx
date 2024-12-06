@@ -1,8 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
-  Typography,
   Grid,
   Paper,
   Table,
@@ -15,10 +14,9 @@ import {
   TextField,
   Snackbar,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
-import CircularProgress from "@mui/material/CircularProgress";
-import axios from "axios";
 
 interface Vehicle {
   vehicleId: string;
@@ -28,8 +26,13 @@ interface Vehicle {
   alertType: string;
 }
 
-const Dashboard: React.FC = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+interface DashboardProps {
+  data: Vehicle[]; // External data passed as a prop
+  onResolveAlert: (vehicleId: string) => void; // Callback to resolve an alert
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ data, onResolveAlert }) => {
+  const [vehicles, setVehicles] = useState<Vehicle[]>(data);
   const [filter, setFilter] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState({
@@ -38,50 +41,10 @@ const Dashboard: React.FC = () => {
     severity: "info" as "success" | "error" | "warning" | "info",
   });
 
-  // Fetch vehicles from backend
-  const fetchVehicles = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get("/api/vehicles");
-      setVehicles(response.data);
-      setNotification({
-        open: true,
-        message: "Vehicles fetched successfully!",
-        severity: "success",
-      });
-    } catch (error) {
-      setNotification({
-        open: true,
-        message: "Failed to fetch vehicles. Please try again.",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Resolve alert for a vehicle
-  const handleResolveAlert = async (vehicleId: string) => {
-    try {
-      await axios.post(`/api/vehicles/${vehicleId}/resolve`);
-      setVehicles((prev) =>
-        prev.map((v) =>
-          v.vehicleId === vehicleId ? { ...v, alertType: "Resolved" } : v
-        )
-      );
-      setNotification({
-        open: true,
-        message: "Alert resolved successfully!",
-        severity: "success",
-      });
-    } catch {
-      setNotification({
-        open: true,
-        message: "Failed to resolve alert. Please try again.",
-        severity: "error",
-      });
-    }
-  };
+  useEffect(() => {
+    // Update vehicles state whenever `data` prop changes
+    setVehicles(data);
+  }, [data]);
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -94,26 +57,20 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ minHeight: "100vh", padding: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Vehicle Tracking Dashboard
-      </Typography>
-      <Button variant="contained" color="primary" onClick={fetchVehicles}>
-        Fetch Vehicles
-      </Button>
-      <Grid container spacing={4} marginTop={2}>
+    <Container maxWidth="lg" sx={{ minHeight: "100vh", paddingY: 4 }}>
+      <Grid container spacing={2}>
         <Grid item xs={12}>
           <Paper className="p-4">
             <TextField
               label="Filter by vehicle name or alert type"
               variant="outlined"
               fullWidth
-              margin="normal"
+              margin="dense" // Use 'dense' to minimize spacing
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
             {loading ? (
-              <CircularProgress />
+              <CircularProgress sx={{ display: "block", margin: "20px auto" }} />
             ) : (
               <TableContainer>
                 <Table>
@@ -138,7 +95,7 @@ const Dashboard: React.FC = () => {
                             variant="contained"
                             color="primary"
                             startIcon={<CheckIcon />}
-                            onClick={() => handleResolveAlert(vehicle.vehicleId)}
+                            onClick={() => onResolveAlert(vehicle.vehicleId)}
                           >
                             Resolve
                           </Button>
