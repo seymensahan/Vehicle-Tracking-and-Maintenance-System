@@ -1,3 +1,4 @@
+//z
 import React from "react";
 import {
   LineChart,
@@ -12,7 +13,7 @@ import {
 import { Paper, Typography } from "@mui/material";
 
 interface MileageChartProps {
-  data: Array<{ name: string; dailyMileage: number }>;
+  data: Array<{ name: string; dailyMileage: number }>; // Expect array of objects with vehicle name and daily mileage.
 }
 
 const MileageChart: React.FC<MileageChartProps> = ({ data }) => {
@@ -22,13 +23,13 @@ const MileageChart: React.FC<MileageChartProps> = ({ data }) => {
         Daily Mileage Trends
       </Typography>
       {data.length === 0 ? (
-        <Typography>No data available to display.</Typography>
+        <Typography>No data available to display.</Typography> // Handle empty data gracefully.
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" /> {/* Add grid lines. */}
             <XAxis
-              dataKey="name"
+              dataKey="name" // Use 'name' as the X-axis key.
               label={{
                 value: "Vehicle Names",
                 position: "insideBottom",
@@ -42,13 +43,13 @@ const MileageChart: React.FC<MileageChartProps> = ({ data }) => {
                 position: "insideLeft",
               }}
             />
-            <Tooltip />
-            <Legend />
+            <Tooltip /> {/* Tooltip on hover. */}
+            <Legend /> {/* Display legend for clarity. */}
             <Line
-              type="monotone"
-              dataKey="dailyMileage"
-              stroke="#8884d8"
-              activeDot={{ r: 8 }}
+              type="monotone" // Line curve type.
+              dataKey="dailyMileage" // Data key for the line.
+              stroke="#8884d8" // Line color.
+              activeDot={{ r: 8 }} // Dot size on hover.
             />
           </LineChart>
         </ResponsiveContainer>

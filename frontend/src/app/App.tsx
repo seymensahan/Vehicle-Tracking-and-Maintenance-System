@@ -1,11 +1,11 @@
-"use client";
-
+//Z
+"use client"
 import React, { useState } from "react";
 import { Container, Typography, Grid } from "@mui/material";
-import FileUpload from "./components/FileUpload";
-import MileageChart from "./components/MileageChart";
-import Dashboard from "./components/Dashboard";
-import NotificationSystem from "./components/NotificationSystem";
+import FileUpload from "./components/FileUpload"; // File upload UI
+import MileageChart from "./components/MileageChart"; // Visualize mileage data
+import Dashboard from "./components/Dashboard"; // Display uploaded data
+import NotificationSystem from "./components/NotificationSystem"; // Display alerts
 
 interface Vehicle {
   vehicleId: string;
@@ -16,13 +16,14 @@ interface Vehicle {
 }
 
 const App: React.FC = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]); // Store vehicle data
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "info" as "success" | "error" | "warning" | "info",
   });
 
+  // Callback to handle uploaded data
   const handleDataUploaded = (data: Vehicle[]) => {
     setVehicles(data);
     setNotification({
@@ -32,27 +33,14 @@ const App: React.FC = () => {
     });
   };
 
+  // Close notification
   const handleCloseNotification = () => {
     setNotification((prev) => ({ ...prev, open: false }));
   };
 
-  const handleResolveAlert = (vehicleId: string) => {
-    console.log(`Alert resolved for vehicle: ${vehicleId}`);
-  };
-
   return (
-    <Container
-      maxWidth="lg"
-      className="py-8"
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-      }}
-    >
-      <Typography variant="h4" gutterBottom textAlign="center">
+    <Container maxWidth="lg" sx={{ minHeight: "100vh", textAlign: "center" }}>
+      <Typography variant="h4" gutterBottom>
         Vehicle Tracking and Maintenance System
       </Typography>
       <Grid container spacing={4}>
@@ -60,7 +48,7 @@ const App: React.FC = () => {
           <FileUpload onDataUploaded={handleDataUploaded} />
         </Grid>
         <Grid item xs={12}>
-          <Dashboard data={vehicles} onResolveAlert={handleResolveAlert} />
+          <Dashboard data={vehicles} onResolveAlert={() => {}} />
         </Grid>
         <Grid item xs={12}>
           <MileageChart
