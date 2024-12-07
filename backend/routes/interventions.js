@@ -2,7 +2,12 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
-// Define your routes here
+// Default route for /api/interventions
+router.get('/', (req, res) => {
+  res.json({ message: "Interventions API is working" });
+});
+
+// Route for /api/interventions/vehicles
 router.get('/vehicles', async (req, res) => {
   try {
     const vehicles = await fetchVehicles();
@@ -12,14 +17,16 @@ router.get('/vehicles', async (req, res) => {
   }
 });
 
+// Function to fetch vehicles data
 const fetchVehicles = async () => {
   try {
-    const response = await axios.get('http://your-api-endpoint/vehicles');
+    // Replace with the correct URL for your data source
+    const response = await axios.get('http://localhost:5000/api/interventions');
     return response.data;
   } catch (error) {
     console.error("Error fetching vehicles:", error);
-    throw error;  // Propagate error
+    throw error; // Propagate error
   }
 };
 
-module.exports = router;  // Export the router
+module.exports = router; // Export the router

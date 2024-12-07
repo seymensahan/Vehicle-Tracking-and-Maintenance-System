@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
-app.use("/api/interventions", interventionsRouter);  // Correct usage of the router
+app.use('/api/interventions', interventionsRouter);  // Correct usage of the router
 app.use('/api', fileUploadRoutes);
 
 // Start the server

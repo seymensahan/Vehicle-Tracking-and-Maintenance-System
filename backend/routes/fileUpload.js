@@ -46,7 +46,6 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-    // Process data and calculate `remainingKm`
     const vehicles = jsonData.map((row) => {
       const dailyMileage = Number(row["Le trajet (Km)"]) || 0;
       const currentKm = Number(row["Kilométrage final"]) || 0;
@@ -64,38 +63,57 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
       };
     });
 
-    // Remove duplicate vehicles based on `vehicleId`
-    const seenIds = new Set();
-    const filteredVehicles = vehicles.filter((v) => {
-      if (seenIds.has(v.vehicleId)) return false;
-      seenIds.add(v.vehicleId);
-      return true;
-    });
+    // Process vehicles to update or insert into the database
+    for (const vehicle of vehicles) {
+      const { name, dailyMileage, remainingKm, alertType } = vehicle;
 
-    // Insert vehicles into the database
-    const query =
-      "INSERT INTO vehicles (vehicleId, name, dailyMileage, remainingKm, alertType) VALUES ?";
-    const values = filteredVehicles.map((v) => [
-      v.vehicleId,
-      v.name,
-      v.dailyMileage,
-      v.remainingKm,
-      v.alertType,
-    ]);
-
-    if (values.length > 0) {
-      db.query(query, [values], (err) => {
-        if (err) throw err;
+      // Check if vehicle exists
+      const existingVehicleQuery = "SELECT * FROM vehicles WHERE name = ?";
+      const existingVehicle = await new Promise((resolve, reject) => {
+        db.query(existingVehicleQuery, [name], (err, results) => {
+          if (err) return reject(err);
+          resolve(results[0]); // Resolve with the first match
+        });
       });
+
+      if (existingVehicle) {
+        // Update existing vehicle
+        const updatedRemainingKm = Math.max(
+          existingVehicle.remainingKm - dailyMileage,
+          0
+        );
+        const updateQuery =
+          "UPDATE vehicles SET dailyMileage = ?, remainingKm = ?, alertType = ? WHERE name = ?";
+        await new Promise((resolve, reject) => {
+          db.query(
+            updateQuery,
+            [dailyMileage, updatedRemainingKm, alertType, name],
+            (err) => {
+              if (err) return reject(err);
+              resolve();
+            }
+          );
+        });
+      } else {
+        // Insert new vehicle
+        const insertQuery =
+          "INSERT INTO vehicles (vehicleId, name, dailyMileage, remainingKm, alertType) VALUES ?";
+        const values = [[uuidv4(), name, dailyMileage, remainingKm, alertType]];
+        await new Promise((resolve, reject) => {
+          db.query(insertQuery, [values], (err) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+      }
     }
 
     fs.unlinkSync(filePath); // Clean up temporary file
-
-    res.status(200).send({ message: "File processed successfully", vehicles: filteredVehicles });
+    res.status(200).send({ message: "File processed successfully" });
   } catch (error) {
     console.error("Error processing file:", error);
     res.status(500).send({ message: "Error processing file", error });
   }
 });
 
-module.exports = router;  // This is important
+module.exports = router;
