@@ -91,7 +91,7 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       fetchVehicles();
       fetchInterventions();
-    }, 5000000);
+    }, 50000);
 
     return () => clearInterval(interval);
   }, []);

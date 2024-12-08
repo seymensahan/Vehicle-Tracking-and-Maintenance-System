@@ -25,11 +25,12 @@ const maintenanceIntervals = {
 const calculateAlerts = (currentKm) => {
   const alerts = [];
 
-  for (const [maintenanceType, intervals] of Object.entries(maintenanceIntervals)) {
+  for (const [maintenanceType, intervals] of Object.entries(
+    maintenanceIntervals
+  )) {
     for (const interval of intervals) {
-      if (currentKm < interval) {
+      if (currentKm >= interval) {
         alerts.push({ maintenanceType, remainingKm: interval - currentKm });
-        break; // Only consider the next closest interval
       }
     }
   }
@@ -40,7 +41,6 @@ const calculateAlerts = (currentKm) => {
   return alerts;
 };
 
-// File upload route
 // File upload route
 router.post("/file-upload", upload.single("file"), async (req, res) => {
     try {
@@ -79,13 +79,9 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
           });
         });
   
-        let vehicleId;
-        let vehicleDailyMileage;
+        let vehicleName = name;
   
         if (existingVehicle) {
-          vehicleId = existingVehicle.vehicleId; // Use existing vehicle ID
-          vehicleDailyMileage = existingVehicle.dailyMileage; // Fetch dailyMileage from DB
-  
           // Update existing vehicle
           const updatedRemainingKm = Math.max(
             existingVehicle.remainingKm - dailyMileage,
@@ -105,13 +101,19 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
           });
         } else {
           // Insert new vehicle
-          vehicleId = uuidv4();
-          vehicleDailyMileage = dailyMileage; // Use the provided daily mileage
           const insertQuery =
             "INSERT INTO vehicles (vehicleId, name, dailyMileage, remainingKm, alertType) VALUES ?";
+  
           const values = [
-            [vehicleId, name, dailyMileage, alertsForVehicle[0]?.remainingKm || 0, mostUrgent.maintenanceType],
+            [
+              uuidv4(),
+              name,
+              dailyMileage,
+              alertsForVehicle[0]?.remainingKm || 0,
+              mostUrgent.maintenanceType,
+            ],
           ];
+  
           await new Promise((resolve, reject) => {
             db.query(insertQuery, [values], (err) => {
               if (err) return reject(err);
@@ -122,27 +124,29 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
   
         // Insert maintenance alerts into the `maintenance_alerts` table
         for (const alert of alertsForVehicle) {
+          const nextDue = currentKm + alert.remainingKm; // Calculate `next_due`
+  
           const insertAlertQuery = `
-            INSERT INTO maintenance_alerts (id, intervention_name, last_performed, next_due, mileage, vehicle_id, alert_sent)
+            INSERT INTO maintenance_alerts (id, intervention_name, last_performed, next_due, mileage, vehicle_name, alert_sent)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               intervention_name = VALUES(intervention_name),
               last_performed = VALUES(last_performed),
               next_due = VALUES(next_due),
               mileage = VALUES(mileage),
-              vehicle_id = VALUES(vehicle_id),
+              vehicle_name = VALUES(vehicle_name),
               alert_sent = VALUES(alert_sent)
           `;
   
           const alertId = uuidv4(); // Generate a new unique ID
           const alertValues = [
-            alertId,                   // id
-            alert.maintenanceType,     // intervention_name
-            currentKm,                 // last_performed: Set to the current odometer reading
-            alert.remainingKm,         // next_due
-            vehicleDailyMileage,       // mileage: Fetched from the `vehicles` table or data source
-            vehicleId,                 // vehicle_id
-            false                      // alert_sent
+            alertId,
+            alert.maintenanceType,
+            currentKm, // Last performed is the current mileage
+            nextDue, // Dynamically calculated next due
+            dailyMileage,
+            vehicleName, // Use the name from the vehicles table
+            false, // Alert not sent yet
           ];
   
           await new Promise((resolve, reject) => {
@@ -167,5 +171,5 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
     }
   });
   
-  module.exports = router;
-  
+
+module.exports = router;
