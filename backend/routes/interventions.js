@@ -3,7 +3,7 @@ const express = require("express");
 const db = require("../db");
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/alerts", async (req, res) => {
   try {
     const alertsQuery = `
       SELECT * FROM maintenance_alerts 
