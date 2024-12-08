@@ -10,34 +10,37 @@ const router = express.Router();
 // Configure multer for file uploads
 const upload = multer({ dest: "uploads/" });
 
-// Helper function to calculate remainingKm and determine alert type
-const calculateRemainingKm = (currentKm, intervals) => {
-  const intervalKeys = Object.keys(intervals);
-  let remainingKm = Infinity;
-  let alertType = "None";
+// Maintenance intervals for each intervention type
+const maintenanceIntervals = {
+  "Remplacement des filtres à gasoil": [5000, 10000, 20000, 50000, 100000],
+  "Vidange moteur": [5000, 10000, 50000, 80000, 100000],
+  "Contrôle du système de freinage": [5000, 10000, 20000, 50000, 100000],
+  "Remplacement pneus": [100000],
+  "Remplacement des batteries": [100000],
+  "Réglage soupape": [10000, 20000, 50000, 80000],
+  "Contrôle et serrage des boulons brides": [50000, 80000, 100000],
+};
 
-  for (const key of intervalKeys) {
-    const interval = intervals[key];
-    if (currentKm < interval) {
-      remainingKm = interval - currentKm;
-      alertType = key;
-      break;
+// Helper function to calculate alerts for a vehicle
+const calculateAlerts = (currentKm) => {
+  const alerts = [];
+
+  for (const [maintenanceType, intervals] of Object.entries(maintenanceIntervals)) {
+    for (const interval of intervals) {
+      if (currentKm < interval) {
+        alerts.push({ maintenanceType, remainingKm: interval - currentKm });
+        break; // Only consider the next closest interval
+      }
     }
   }
 
-  return { remainingKm, alertType };
+  // Sort alerts by urgency (smallest remainingKm)
+  alerts.sort((a, b) => a.remainingKm - b.remainingKm);
+
+  return alerts;
 };
 
-// Maintenance intervals and corresponding alerts
-const maintenanceIntervals = {
-  "Contrôle générale des liaisons mécanique": 5000,
-  "Contrôle générale des fonctions électrique": 10000,
-  "Vérification des niveaux fluide": 20000,
-  "Vidange moteur": 50000,
-  "Remplacement des filtres à huile": 80000,
-  "Remplacement des filtres à gasoil": 100000,
-};
-
+// File upload route
 router.post("/file-upload", upload.single("file"), async (req, res) => {
   try {
     const filePath = req.file.path;
@@ -46,28 +49,27 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-    const vehicles = jsonData.map((row) => {
+    const notifications = [];
+
+    for (const row of jsonData) {
+      const name = row["Tracker name"] || "";
       const dailyMileage = Number(row["Le trajet (Km)"]) || 0;
       const currentKm = Number(row["Kilométrage final"]) || 0;
-      const { remainingKm, alertType } = calculateRemainingKm(
-        currentKm,
-        maintenanceIntervals
-      );
 
-      return {
-        vehicleId: uuidv4(),
-        name: row["Tracker name"] || "",
-        dailyMileage,
-        remainingKm,
-        alertType,
-      };
-    });
+      // Calculate alerts for the vehicle
+      const alertsForVehicle = calculateAlerts(currentKm);
 
-    // Process vehicles to update or insert into the database
-    for (const vehicle of vehicles) {
-      const { name, dailyMileage, remainingKm, alertType } = vehicle;
+      if (alertsForVehicle.length > 0) {
+        notifications.push({
+          name,
+          alerts: alertsForVehicle,
+        });
+      }
 
-      // Check if vehicle exists
+      // Determine the most urgent alert for the alertType field
+      const mostUrgent = alertsForVehicle[0] || { maintenanceType: "None" };
+
+      // Check if the vehicle exists in the database
       const existingVehicleQuery = "SELECT * FROM vehicles WHERE name = ?";
       const existingVehicle = await new Promise((resolve, reject) => {
         db.query(existingVehicleQuery, [name], (err, results) => {
@@ -87,7 +89,7 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
         await new Promise((resolve, reject) => {
           db.query(
             updateQuery,
-            [dailyMileage, updatedRemainingKm, alertType, name],
+            [dailyMileage, updatedRemainingKm, mostUrgent.maintenanceType, name],
             (err) => {
               if (err) return reject(err);
               resolve();
@@ -98,7 +100,9 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
         // Insert new vehicle
         const insertQuery =
           "INSERT INTO vehicles (vehicleId, name, dailyMileage, remainingKm, alertType) VALUES ?";
-        const values = [[uuidv4(), name, dailyMileage, remainingKm, alertType]];
+        const values = [
+          [uuidv4(), name, dailyMileage, alertsForVehicle[0]?.remainingKm || 0, mostUrgent.maintenanceType],
+        ];
         await new Promise((resolve, reject) => {
           db.query(insertQuery, [values], (err) => {
             if (err) return reject(err);
@@ -109,7 +113,12 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
     }
 
     fs.unlinkSync(filePath); // Clean up temporary file
-    res.status(200).send({ message: "File processed successfully" });
+
+    // Respond with notifications for vehicles
+    res.status(200).send({
+      message: "File processed successfully",
+      notifications,
+    });
   } catch (error) {
     console.error("Error processing file:", error);
     res.status(500).send({ message: "Error processing file", error });
