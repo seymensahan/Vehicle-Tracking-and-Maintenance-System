@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -12,48 +11,38 @@ import {
   TableRow,
   Button,
   TextField,
-  Snackbar,
-  Alert,
-  CircularProgress,
 } from "@mui/material";
-import CheckIcon from "@mui/icons-material/Check";
+import axios from "axios";
 
-interface Vehicle {
-  vehicleId: string;
-  name: string;
-  dailyMileage: number;
+interface Alert {
+  alertId: string;
+  vehicleName: string;
+  maintenanceType: string;
   remainingKm: number;
-  alertType: string;
 }
 
 interface DashboardProps {
-  data: Vehicle[]; // External data passed as a prop
-  onResolveAlert: (vehicleId: string) => void; // Callback to resolve an alert
+  data: Alert[]; // External data passed as a prop
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, onResolveAlert }) => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(data);
+const Dashboard: React.FC<DashboardProps> = ({ data }) => {
+  const [alerts, setAlerts] = useState<Alert[]>(data); // Initialize alerts with the passed data prop
   const [filter, setFilter] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [notification, setNotification] = useState({
-    open: false,
-    message: "",
-    severity: "info" as "success" | "error" | "warning" | "info",
-  });
 
-  useEffect(() => {
-    // Update vehicles state whenever `data` prop changes
-    setVehicles(data);
-  }, [data]);
-
-  const filteredVehicles = vehicles.filter(
-    (vehicle) =>
-      vehicle.name.toLowerCase().includes(filter.toLowerCase()) ||
-      vehicle.alertType.toLowerCase().includes(filter.toLowerCase())
+  // Filter alerts based on vehicle name or maintenance type
+  const filteredAlerts = alerts.filter(
+    (alert) =>
+      (alert.vehicleName && alert.vehicleName.toLowerCase().includes(filter.toLowerCase())) ||
+      (alert.maintenanceType && alert.maintenanceType.toLowerCase().includes(filter.toLowerCase()))
   );
 
-  const handleCloseNotification = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
+  const resolveAlert = async (id: string) => {
+    try {
+      await axios.post(`/api/interventions/resolve/${id}`);
+      setAlerts((prev) => prev.filter((alert) => alert.alertId !== id));
+    } catch (error) {
+      console.error("Error resolving alert:", error);
+    }
   };
 
   return (
@@ -70,57 +59,34 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onResolveAlert }) => {
               onChange={(e) => setFilter(e.target.value)}
             />
             
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Vehicle Name</TableCell>
-                      <TableCell>Daily Mileage</TableCell>
-                      <TableCell>Remaining KM</TableCell>
-                      <TableCell>Alert Type</TableCell>
-                      <TableCell>Actions</TableCell>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Vehicle Name</TableCell>
+                    <TableCell>Maintenance Type</TableCell>
+                    <TableCell>Remaining KM</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredAlerts.map((alert) => (
+                    <TableRow key={alert.alertId}>
+                      <TableCell>{alert.vehicleName}</TableCell>
+                      <TableCell>{alert.maintenanceType}</TableCell>
+                      <TableCell>{alert.remainingKm}</TableCell>
+                      <TableCell>
+                        <Button onClick={() => resolveAlert(alert.alertId)}>Resolve</Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredVehicles.map((vehicle) => (
-                      <TableRow key={vehicle.vehicleId}>
-                        <TableCell>{vehicle.name}</TableCell>
-                        <TableCell>{vehicle.dailyMileage}</TableCell>
-                        <TableCell>{vehicle.remainingKm}</TableCell>
-                        <TableCell>{vehicle.alertType}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<CheckIcon />}
-                            onClick={() => onResolveAlert(vehicle.vehicleId)}
-                          >
-                            Resolve
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
             
           </Paper>
         </Grid>
       </Grid>
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseNotification}
-          severity={notification.severity}
-          sx={{ width: "100%" }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };
