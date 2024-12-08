@@ -69,9 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onResolveAlert }) => {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
-            {loading ? (
-              <CircularProgress sx={{ display: "block", margin: "20px auto" }} />
-            ) : (
+            
               <TableContainer>
                 <Table>
                   <TableHead>
@@ -105,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onResolveAlert }) => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            )}
+            
           </Paper>
         </Grid>
       </Grid>

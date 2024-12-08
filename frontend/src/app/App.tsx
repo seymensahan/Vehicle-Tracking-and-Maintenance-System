@@ -5,6 +5,7 @@ import FileUpload from "./components/FileUpload"; // File upload UI
 import MileageChart from "./components/MileageChart"; // Visualize mileage data
 import Dashboard from "./components/Dashboard"; // Display uploaded data
 import NotificationSystem from "./components/NotificationSystem"; // Display alerts
+import axios from "axios";
 
 interface Vehicle {
   vehicleId: string;
@@ -41,25 +42,32 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Simulate data fetch and loading state (You can replace this with actual data fetching logic)
-    setLoading(true);
-
-    // Example data fetch
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/interventions'); // Proxied to http://localhost:5000/api/interventions/vehicles
-        if (!response.ok) {
-          throw new Error("Failed to fetch vehicles");
+        setLoading(true);
+        const response = await axios.get("/api/interventions/vehicles");
+        if (Array.isArray(response.data)) {
+          setVehicles(response.data);
+          console.log("Response Data:", response.data);
+          setNotification({
+            open: true,
+            message: "Vehicles fetched successfully!",
+            severity: "success",
+          });
+        } else {
+          throw new Error("Fetched data is not an array.");
         }
-        const data = await response.json();
-        return data;
       } catch (error) {
-        console.error("Error fetching data:", error);
-        throw error;
+        console.error("Error fetching vehicles:", error);
+        setNotification({
+          open: true,
+          message: "Failed to fetch vehicles. Please try again.",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
       }
     };
-    
-    
 
     fetchData();
   }, []); // Run this effect only once on component mount

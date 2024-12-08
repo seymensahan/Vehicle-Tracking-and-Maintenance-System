@@ -1,32 +1,36 @@
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
+const db = require("../db"); // Import the database connection
 const router = express.Router();
 
 // Default route for /api/interventions
-router.get('/', (req, res) => {
+router.get("/", (req, res) => {
   res.json({ message: "Interventions API is working" });
 });
 
 // Route for /api/interventions/vehicles
-router.get('/vehicles', async (req, res) => {
+router.get("/vehicles", async (req, res) => {
   try {
-    const vehicles = await fetchVehicles();
-    res.json(vehicles);
+    const query = "SELECT * FROM vehicles"; // Query to fetch all vehicles from the database
+
+    // Execute the query
+    const vehicles = await new Promise((resolve, reject) => {
+      db.query(query, (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+
+    // Check if data exists
+    if (vehicles.length > 0) {
+      res.json(vehicles);
+    } else {
+      res.status(404).json({ message: "No vehicles found in the database" });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch vehicles", error });
+    console.error("Error fetching vehicles:", error.message);
+    res.status(500).json({ message: "Failed to fetch vehicles", error: error.message });
   }
 });
 
-// Function to fetch vehicles data
-const fetchVehicles = async () => {
-  try {
-    // Replace with the correct URL for your data source
-    const response = await axios.get('http://localhost:5000/api/interventions');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching vehicles:", error);
-    throw error; // Propagate error
-  }
-};
-
-module.exports = router; // Export the router
+// Export the router
+module.exports = router;
