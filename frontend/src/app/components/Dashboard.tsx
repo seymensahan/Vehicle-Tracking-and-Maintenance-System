@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Container,
   Grid,
@@ -16,18 +16,13 @@ import {
 } from "@mui/material";
 import axios from "axios";
 
-interface Vehicle {
-  vehicleId: string;
-  name: string;
-}
-
 interface Intervention {
   id: string;
   intervention_name: string;
   last_performed: string;
-  next_due: string;
+  next_due: number;
   mileage: number;
-  vehicle_id: string;
+  vehicle_name: string; // Updated to match database column
   alert_sent: boolean;
 }
 
@@ -37,50 +32,28 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [interventions, setInterventions] = useState<Intervention[]>(data);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [filter, setFilter] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true); // Add loading state
+  const [filter, setFilter] = useState<string>(""); // Filter state for vehicle_name
+  const [loading, setLoading] = useState<boolean>(false); // Add loading state
   const [error, setError] = useState<string | null>(null); // Add error state
 
-  // Fetch vehicles to map vehicle_id to vehicleName
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        setLoading(true); // Start loading
-        const response = await axios.get("/api/interventions/vehicles");
-        setVehicles(response.data);
-      } catch (error) {
-        setError("Error fetching vehicles"); // Set error message if request fails
-        console.error("Error fetching vehicles:", error);
-      } finally {
-        setLoading(false); // End loading
-      }
-    };
-
-    fetchVehicles();
-  }, []);
-
-  // Filter interventions based on filter input
+  // Filter interventions directly by vehicle_name
   const filteredInterventions = interventions.filter((intervention) =>
-    vehicles
-      .find((vehicle) => vehicle.vehicleId === intervention.vehicle_id)
-      ?.name.toLowerCase()
-      .includes(filter.toLowerCase())
+    intervention.vehicle_name.toLowerCase().includes(filter.toLowerCase())
   );
 
   // Resolve an intervention
   const resolveIntervention = async (id: string) => {
     try {
+      setLoading(true); // Start loading
       await axios.post(`/api/interventions/resolve/${id}`);
+      // Remove resolved intervention from the state
       setInterventions((prev) => prev.filter((intervention) => intervention.id !== id));
     } catch (error) {
+      setError("Error resolving intervention. Please try again."); // Set error message
       console.error("Error resolving intervention:", error);
+    } finally {
+      setLoading(false); // End loading
     }
-  };
-
-  // Map vehicle_id to vehicleName
-  const getVehicleName = (vehicleId: string) => {
-    return vehicles.find((vehicle) => vehicle.vehicleId === vehicleId)?.name || "Unknown Vehicle";
   };
 
   return (
@@ -97,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
               onChange={(e) => setFilter(e.target.value)}
             />
             {loading ? (
-              <CircularProgress /> // Show loading spinner while fetching
+              <CircularProgress /> // Show loading spinner while resolving
             ) : error ? (
               <Typography color="error">{error}</Typography> // Display error message
             ) : (
@@ -117,12 +90,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                   <TableBody>
                     {filteredInterventions.map((intervention) => (
                       <TableRow key={intervention.id}>
-                        <TableCell>{getVehicleName(intervention.vehicle_id)}</TableCell>
+                        <TableCell>{intervention.vehicle_name}</TableCell>
                         <TableCell>{intervention.intervention_name}</TableCell>
                         <TableCell>{intervention.last_performed}</TableCell>
                         <TableCell>{intervention.next_due}</TableCell>
                         <TableCell>{intervention.mileage}</TableCell>
-                        <TableCell>{intervention.alert_sent ? "Yes" : "No"}</TableCell>
+                        <TableCell>
+                          {intervention.alert_sent ? "Yes" : "No"}
+                        </TableCell>
                         <TableCell>
                           <Button
                             variant="contained"

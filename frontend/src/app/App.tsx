@@ -18,10 +18,11 @@ interface Intervention {
   id: string;
   intervention_name: string;
   last_performed: string;
-  next_due: string;
+  next_due: number;
   mileage: number;
   vehicle_id: string;
   alert_sent: boolean;
+  vehicle_name: string; // vehicle_name is now required
 }
 
 const App: React.FC = () => {
@@ -52,12 +53,19 @@ const App: React.FC = () => {
     }
   };
 
-  // Fetch intervention data
+  // Fetch intervention data and map vehicle_name
   const fetchInterventions = async () => {
     try {
-      const response = await axios.get("api/interventions/alerts");
-      setInterventions(response.data);
-      console.log("Alerts fetched:", response.data);
+      const response = await axios.get("/api/interventions/alerts");
+      const interventionsWithVehicleName = response.data.map((intervention: Intervention) => {
+        const vehicle = vehicles.find((v) => v.vehicleId === intervention.vehicle_id);
+        return {
+          ...intervention,
+          vehicle_name: vehicle ? vehicle.name : "Unknown Vehicle", // Map vehicle_name
+        };
+      });
+      setInterventions(interventionsWithVehicleName);
+      console.log("Alerts fetched:", interventionsWithVehicleName);
     } catch (error) {
       console.error("Error fetching interventions:", error);
       setNotification({
@@ -85,16 +93,22 @@ const App: React.FC = () => {
 
   // Fetch data on mount and set interval
   useEffect(() => {
-    fetchVehicles();
-    fetchInterventions();
+    fetchVehicles(); // Load vehicles first
+
+    // Only fetch interventions after vehicles are fetched
+    if (vehicles.length > 0) {
+      fetchInterventions();
+    }
 
     const interval = setInterval(() => {
       fetchVehicles();
-      fetchInterventions();
-    }, 50000);
+      if (vehicles.length > 0) {
+        fetchInterventions();
+      }
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [vehicles]); // Ensure vehicles are updated before mapping vehicle_name
 
   return (
     <Container maxWidth="lg" sx={{ minHeight: "100vh", textAlign: "center" }}>
@@ -109,7 +123,7 @@ const App: React.FC = () => {
           {loading ? (
             <Typography variant="h6">Loading data...</Typography>
           ) : (
-            <Dashboard data={interventions && interventions.length > 0 ? interventions :[]} />
+            <Dashboard data={interventions && interventions.length > 0 ? interventions : []} />
           )}
         </Grid>
         <Grid item xs={12}>
