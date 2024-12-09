@@ -28,9 +28,8 @@ router.post("/resolve/:id", async (req, res) => {
   
       // Fetch the specific alert
       const alertQuery = `
-        SELECT ma.intervention_name, ma.remainingKm, v.name, v.dailyMileage, v.remainingKm AS vehicleRemainingKm
+        SELECT ma.intervention_name,  v.name, v.dailyMileage, v.remainingKm AS vehicleRemainingKm
         FROM maintenance_alerts ma
-        JOIN vehicles v ON v.name = ma.vehicle_name
         WHERE ma.id = ?`;
       const alert = await new Promise((resolve, reject) => {
         db.query(alertQuery, [id], (err, results) => {

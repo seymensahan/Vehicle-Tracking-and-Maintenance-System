@@ -8,7 +8,6 @@ const db = require("../db");
 
 const router = express.Router();
 
-// Configure multer for file uploads
 const upload = multer({ dest: "uploads/" });
 
 // Maintenance intervals for each intervention type
@@ -125,7 +124,7 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
 
       // Insert maintenance alerts into the `maintenance_alerts` table
       for (const alert of alertsForVehicle) {
-        const nextDue = alert.remainingKm; // `next_due` is now dynamically calculated
+        const nextDue = alert.remainingKm; 
 
         const insertAlertQuery = `
           INSERT INTO maintenance_alerts (id, intervention_name, last_performed, next_due, mileage, vehicle_name, alert_sent)
@@ -139,15 +138,15 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
             alert_sent = VALUES(alert_sent)
         `;
 
-        const alertId = uuidv4(); // Generate a new unique ID
+        const alertId = uuidv4(); 
         const alertValues = [
           alertId,
           alert.maintenanceType,
-          currentKm, // Last performed is the current mileage
-          nextDue, // Dynamically calculated next due
+          currentKm, 
+          nextDue, 
           dailyMileage,
-          vehicleName, // Use the name from the vehicles table
-          false, // Alert not sent yet
+          vehicleName, 
+          false, 
         ];
 
         await new Promise((resolve, reject) => {
@@ -159,9 +158,8 @@ router.post("/file-upload", upload.single("file"), async (req, res) => {
       }
     }
 
-    fs.unlinkSync(filePath); // Clean up temporary file
+    fs.unlinkSync(filePath); 
 
-    // Respond with notifications for vehicles
     res.status(200).send({
       message: "File processed successfully",
       notifications,

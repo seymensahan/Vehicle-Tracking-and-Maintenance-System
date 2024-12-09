@@ -1,5 +1,3 @@
-//z
-
 import * as XLSX from 'xlsx';
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
@@ -8,22 +6,21 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import axios from "axios";
 
 interface FileUploadProps {
-  onDataUploaded: (data: Vehicle[]) => void; // Callback for the parent to receive uploaded data
+  onDataUploaded: (data: Vehicle[]) => void;
 }
 
 interface Vehicle {
-  vehicleId: string; // Unique identifier for the vehicle
-  name: string; // Vehicle name
-  dailyMileage: number; // Daily distance driven
-  remainingKm: number; // Remaining distance before maintenance
-  alertType: string; // Maintenance alert type
+  vehicleId: string;
+  name: string;
+  dailyMileage: number;
+  remainingKm: number;
+  alertType: string;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onDataUploaded }) => {
-  // Handles the file drop
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0]; // Select the first file
+      const file = acceptedFiles[0];
 
       if (!file) {
         console.error("No file selected");
@@ -31,19 +28,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataUploaded }) => {
       }
 
       const formData = new FormData();
-      formData.append("file", file); // Append the file to the form data
+      formData.append("file", file);
 
       try {
-        // Send the file to the backend
         const response = await axios.post("/api/file-upload", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         });
 
-        // Extract the processed data from the backend response
         const { vehicles } = response.data;
-        onDataUploaded(vehicles); // Pass the data to the parent component
+        onDataUploaded(vehicles);
       } catch (err: any) {
         console.error("Error uploading file:", err.response?.data || err.message);
       }
@@ -51,11 +46,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataUploaded }) => {
     [onDataUploaded]
   );
 
-  // Dropzone configuration for drag-and-drop or file selection
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "application/vnd.ms-excel": [".xls"], // Accept Excel files
+      "application/vnd.ms-excel": [".xls"],
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
     },
   });

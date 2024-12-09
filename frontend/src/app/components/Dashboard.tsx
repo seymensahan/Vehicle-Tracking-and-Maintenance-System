@@ -27,10 +27,11 @@ interface Intervention {
 }
 
 interface DashboardProps {
-  data: Intervention[]; // External data passed as a prop
+  data: Intervention[];  // External data passed as a prop
+  
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data }) => {
+const Dashboard = ({ data }: DashboardProps) => {
   const [interventions, setInterventions] = useState<Intervention[]>(data);
   const [filter, setFilter] = useState<string>(""); // Filter state for vehicle_name
   const [loading, setLoading] = useState<boolean>(false); // Add loading state
