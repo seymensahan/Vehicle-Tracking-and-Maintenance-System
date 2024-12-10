@@ -55,7 +55,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDataUploaded }) => {
   });
 
   return (
-    <Paper {...getRootProps()} className="p-6 text-center cursor-pointer">
+    <Paper {...getRootProps()} className="p-6 text-center cursor-pointer hover:bg-gray-400" >
       <input {...getInputProps()} />
       <CloudUploadIcon style={{ fontSize: "40px", color: "#2196f3" }} />
       <Typography variant="h6">
